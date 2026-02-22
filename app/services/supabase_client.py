@@ -8,7 +8,16 @@ import os
 from functools import lru_cache
 from typing import Optional
 
-from supabase import create_client, Client
+import sys
+
+try:
+    from supabase import create_client, Client
+except ImportError:
+    class Client:
+        pass
+    def create_client(url, key):
+        return MockSupabaseClient()
+
 import jwt
 
 

@@ -541,3 +541,60 @@ def risk_audit():
         "auto_cleared": auto_cleared_count
     })
 
+
+@claims_bp.route("/analyze", methods=["POST"])
+def analyze_claim():
+    """
+    Simulated ML intelligence service for Insurance Fraud Alerts page.
+    """
+    import random
+    from flask import request
+    import time
+
+    time.sleep(1.5)
+
+    data = request.json or {}
+    patient_name = data.get("patient_name", "Unknown Patient")
+    claim_amount = float(data.get("claim_amount", random.randint(1000, 50000)))
+    treatment = data.get("treatment_category", "General Admission")
+
+    fraud_score = random.randint(15, 95)
+    
+    anomaly_flags = []
+    if fraud_score > 70:
+        anomaly_flags.append("Inflated billing patterns detected")
+        anomaly_flags.append("Duplicate procedures in history")
+    elif fraud_score > 40:
+        anomaly_flags.append("Pricing slightly above regional average")
+    
+    if claim_amount > 20000:
+        anomaly_flags.append("High-cost claim variance")
+
+    claimable_items = [
+        {"desc": f"Base {treatment}", "amount": claim_amount * 0.6},
+        {"desc": "Standard Room Charge", "amount": claim_amount * 0.2}
+    ]
+    
+    non_claimable_items = []
+    if fraud_score > 50:
+        non_claimable_items.append({"desc": "Unnecessary MRI Scan", "amount": claim_amount * 0.15})
+        non_claimable_items.append({"desc": "Unbundled lab tests", "amount": claim_amount * 0.05})
+
+    ai_summary = f"AI Analysis complete for {patient_name}. "
+    if fraud_score > 75:
+        ai_summary += "Critical risk factors identified. Escalation to human investigator highly recommended due to potential upcoding."
+    elif fraud_score > 40:
+        ai_summary += "Moderate anomalies found in coding practices. Manual review suggested for non-claimable items."
+    else:
+        ai_summary += "Claim aligns with standard policy limits and regional pricing averages."
+
+    response = {
+        "fraud_score": fraud_score,
+        "claimable_items": claimable_items,
+        "non_claimable_items": non_claimable_items,
+        "anomaly_flags": anomaly_flags,
+        "ai_summary": ai_summary
+    }
+
+    return jsonify(response), 200
+

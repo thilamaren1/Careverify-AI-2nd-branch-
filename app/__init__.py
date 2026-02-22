@@ -22,6 +22,10 @@ def create_app(config_name="production"):
     init_extensions(app)
     
     # Minimal health check (inline as backup)
+    @app.route("/")
+    def home():
+        return "Server is running bro 🚀"
+
     @app.route("/health")
     def health_check():
         return jsonify({"status": "ok", "message": "CareVerify API is running", "version": "1.0.1-fixed"}), 200

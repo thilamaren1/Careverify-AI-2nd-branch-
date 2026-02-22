@@ -1,0 +1,753 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+    <title>CareVerify AI — Fraud Intelligence</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+        href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Nunito+Sans:wght@300;400;600;700;800&display=swap"
+        rel="stylesheet" />
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --bg: #f8faf9;
+            --card-bg: #ffffff;
+            --sidebar-bg: #ffffff;
+            --text-primary: #059669;
+            --text-secondary: #5c716e;
+            --accent: #059669;
+            --accent-hover: #047857;
+            --accent-soft: #ecfdf5;
+            --success: #059669;
+            --warning: #eab308;
+            --danger: #ef4444;
+            --info: #3b82f6;
+            --border: rgba(5, 150, 105, 0.12);
+            --shadow: 0 2px 12px rgba(0, 0, 0, 0.05);
+            --shadow-card: 0 10px 24px rgba(0, 0, 0, 0.06);
+            --radius: 14px;
+            --font: 'Plus Jakarta Sans', 'Nunito Sans', sans-serif;
+        }
+
+        *,
+        *::before,
+        *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background: var(--bg);
+            color: var(--text-primary);
+            font-family: var(--font);
+            -webkit-font-smoothing: antialiased;
+            overflow-x: hidden;
+        }
+
+        .dash-wrap {
+            display: grid;
+            grid-template-columns: 220px 1fr;
+            min-height: 100vh;
+        }
+
+        /* Sidebar Styles (reused) */
+        .sidebar {
+            background: var(--sidebar-bg);
+            border-right: 1px solid var(--border);
+            padding: 1.5rem 1rem;
+            position: sticky;
+            top: 0;
+            height: 100vh;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+        }
+
+        .sidebar-logo {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 1.25rem;
+            font-weight: 800;
+            color: var(--text-primary);
+            text-decoration: none;
+            margin-bottom: 1.75rem;
+            padding: 0 0.5rem;
+        }
+
+        .sidebar-logo svg {
+            width: 24px;
+            height: 24px;
+            stroke: var(--text-primary);
+            fill: none;
+            stroke-width: 2.5;
+        }
+
+        .sidebar-section {
+            font-size: 0.65rem;
+            font-weight: 700;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            color: var(--text-secondary);
+            opacity: 0.5;
+            padding: 0.5rem 0.75rem 0.35rem;
+            margin-top: 0.75rem;
+        }
+
+        .sidebar-item {
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            padding: 0.55rem 0.75rem;
+            border-radius: 10px;
+            text-decoration: none;
+            font-size: 0.82rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+            transition: all 0.15s;
+            cursor: pointer;
+        }
+
+        .sidebar-item:hover,
+        .sidebar-item.active {
+            background: rgba(5, 150, 105, 0.08);
+            color: var(--text-primary);
+        }
+
+        .sidebar-item svg {
+            width: 15px;
+            height: 15px;
+            stroke: currentColor;
+            fill: none;
+            stroke-width: 1.8;
+        }
+
+        .sidebar-badge {
+            margin-left: auto;
+            background: #ef4444;
+            color: #fff;
+            font-size: 0.6rem;
+            font-weight: 800;
+            padding: 1px 6px;
+            border-radius: 99px;
+        }
+
+        .sidebar-footer {
+            margin-top: auto;
+            padding-top: 1rem;
+            border-top: 1px solid var(--border);
+        }
+
+        .sidebar-user {
+            display: flex;
+            align-items: center;
+            gap: 0.65rem;
+            padding: 0.5rem 0.6rem;
+        }
+
+        .sidebar-avatar {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            background: #3b82f6;
+            color: #fff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.65rem;
+            font-weight: 800;
+        }
+
+        .sidebar-user-info .name {
+            font-size: 0.78rem;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+
+        .sidebar-user-info .role {
+            font-size: 0.68rem;
+            color: var(--text-secondary);
+        }
+
+        .main {
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+        }
+
+        .topbar {
+            background: rgba(245, 250, 251, 0.9);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid var(--border);
+            padding: 0 2rem;
+            height: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            position: sticky;
+            top: 0;
+            z-index: 50;
+        }
+
+        .topbar-title {
+            font-size: 0.95rem;
+            font-weight: 800;
+            color: var(--text-primary);
+        }
+
+        .content {
+            padding: 2rem;
+            display: flex;
+            flex-direction: column;
+            gap: 2rem;
+        }
+
+        /* KPI Cards */
+        .metrics-strip {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 1rem;
+        }
+
+        .metric-card {
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 1.25rem;
+            box-shadow: var(--shadow-card);
+            transition: transform 0.2s;
+            position: relative;
+        }
+
+        .metric-card:hover {
+            transform: translateY(-3px);
+        }
+
+        .metric-val {
+            font-size: 1.5rem;
+            font-weight: 800;
+            margin-top: 0.5rem;
+        }
+
+        .metric-label {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            font-weight: 600;
+        }
+
+        /* Fraud Table */
+        .card {
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow-card);
+            overflow: hidden;
+        }
+
+        .card-header {
+            padding: 1.25rem 1.5rem;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .card-title {
+            font-size: 0.95rem;
+            font-weight: 800;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.8rem;
+        }
+
+        th {
+            text-align: left;
+            padding: 1rem;
+            font-weight: 700;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            font-size: 0.65rem;
+            letter-spacing: 0.05em;
+            border-bottom: 1px solid var(--border);
+        }
+
+        td {
+            padding: 1rem;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.03);
+        }
+
+        .risk-score {
+            font-weight: 800;
+            padding: 0.25rem 0.5rem;
+            border-radius: 6px;
+        }
+
+        .risk-high {
+            background: rgba(239, 68, 68, 0.1);
+            color: #ef4444;
+        }
+
+        .risk-med {
+            background: rgba(234, 179, 8, 0.1);
+            color: #eab308;
+        }
+
+        .risk-low {
+            background: rgba(5, 150, 105, 0.1);
+            color: #059669;
+        }
+
+        /* Investigations Panel */
+        .slide-panel {
+            position: fixed;
+            top: 0;
+            right: -450px;
+            width: 450px;
+            height: 100vh;
+            background: #fff;
+            box-shadow: -10px 0 30px rgba(0, 0, 0, 0.1);
+            z-index: 1000;
+            transition: right 0.4s cubic-bezier(0.165, 0.84, 0.44, 1);
+            padding: 2rem;
+            overflow-y: auto;
+        }
+
+        .slide-panel.open {
+            right: 0;
+        }
+
+        .panel-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(0, 0, 0, 0.3);
+            z-index: 999;
+            display: none;
+        }
+
+        .panel-overlay.open {
+            display: block;
+        }
+
+        /* Upload System */
+        .upload-zone {
+            border: 2px dashed var(--border);
+            border-radius: var(--radius);
+            padding: 3rem;
+            text-align: center;
+            background: var(--bg);
+            cursor: pointer;
+            transition: all 0.2s;
+            margin-bottom: 2rem;
+        }
+
+        .upload-zone:hover {
+            border-color: var(--accent);
+            background: var(--accent-soft);
+        }
+
+        .upload-icon {
+            font-size: 2rem;
+            margin-bottom: 1rem;
+            color: var(--accent);
+        }
+
+        /* AI Processing Loader */
+        #ai-loader {
+            display: none;
+            text-align: center;
+            padding: 2rem;
+        }
+
+        .loader-spinner {
+            border: 4px solid var(--border);
+            border-top: 4px solid var(--accent);
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 1rem;
+        }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        /* Charts */
+        .charts-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.5rem;
+        }
+
+        .chart-container {
+            background: #fff;
+            padding: 1.5rem;
+            border-radius: var(--radius);
+            border: 1px solid var(--border);
+            height: 300px;
+        }
+
+        .btn-ivestigate {
+            background: #000;
+            color: #fff;
+            border: none;
+            padding: 0.4rem 0.8rem;
+            border-radius: 6px;
+            font-weight: 700;
+            cursor: pointer;
+            font-size: 0.75rem;
+        }
+
+        .btn-ivestigate:hover {
+            opacity: 0.8;
+        }
+
+        /* Innovative Features */
+        .trust-meter {
+            height: 8px;
+            background: #eee;
+            border-radius: 4px;
+            overflow: hidden;
+            margin: 10px 0;
+        }
+
+        .trust-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #ef4444, #eab308, #059669);
+            transition: width 1s;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="dash-wrap">
+        <aside class="sidebar">
+            <a class="sidebar-logo" href="index .html">
+                <svg viewBox="0 0 24 24">
+                    <path d="M22 12h-4l-3 9L9 3l-3 9H2" />
+                </svg> CareVerify
+            </a>
+            <span class="sidebar-section">Intelligence</span>
+            <a class="sidebar-item" href="insurance-dashboard.html">
+                <svg viewBox="0 0 24 24">
+                    <rect x="3" y="3" width="7" height="7" rx="1" />
+                    <rect x="14" y="3" width="7" height="7" rx="1" />
+                    <rect x="3" y="14" width="7" height="7" rx="1" />
+                    <rect x="14" y="14" width="7" height="7" rx="1" />
+                </svg> Dashboard
+            </a>
+            <a class="sidebar-item active" href="fraud-alerts.html">
+                <svg viewBox="0 0 24 24">
+                    <path
+                        d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+                    <line x1="12" y1="9" x2="12" y2="13" />
+                    <line x1="12" y1="17" x2="12.01" y2="17" />
+                </svg> Fraud Alerts <span class="sidebar-badge">11</span>
+            </a>
+            <span class="sidebar-section">Account</span>
+            <a class="sidebar-item" href="index .html">
+                <svg viewBox="0 0 24 24">
+                    <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+                    <polyline points="16 17 21 12 16 7" />
+                    <line x1="21" y1="12" x2="9" y2="12" />
+                </svg> Logout
+            </a>
+            <div class="sidebar-footer">
+                <div class="sidebar-user">
+                    <div class="sidebar-avatar">AD</div>
+                    <div class="sidebar-user-info">
+                        <div class="name">Admin User</div>
+                        <div class="role">Staff Auditor</div>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <main class="main">
+            <div class="topbar">
+                <div class="topbar-title">Insurance Fraud Intelligence</div>
+                <div style="font-size: 0.8rem; color: var(--text-secondary);">Enterprise Shield v2.4</div>
+            </div>
+
+            <div class="content">
+                <!-- KPI Section -->
+                <div class="metrics-strip">
+                    <div class="metric-card">
+                        <div class="metric-label">Suspicious Claims Today</div>
+                        <div class="metric-val" style="color: var(--danger);">24</div>
+                        <div style="font-size: 0.7rem; color: var(--text-secondary); margin-top: 5px;">+12% vs avg</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-label">High Risk Hospitals</div>
+                        <div class="metric-val" style="color: var(--warning);">8</div>
+                        <div style="font-size: 0.7rem; color: var(--text-secondary); margin-top: 5px;">Scrutiny active
+                        </div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-label">Pending Reviews</div>
+                        <div class="metric-val">11</div>
+                        <div style="font-size: 0.7rem; color: var(--text-secondary); margin-top: 5px;">SLA: 4h remain
+                        </div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-label">Auto Approved %</div>
+                        <div class="metric-val" style="color: var(--success);">88.4%</div>
+                        <div style="font-size: 0.7rem; color: var(--text-secondary); margin-top: 5px;">High efficiency
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Claim Upload Mode -->
+                <div class="card" style="padding: 2rem;">
+                    <h3 style="margin-bottom: 1.5rem; font-size: 1.1rem;">Submit New Claim for AI Risk Evaluation</h3>
+                    <div class="upload-zone" onclick="simulateUpload()">
+                        <div class="upload-icon">📤</div>
+                        <h4 style="margin-bottom: 0.5rem;">Drag & Drop Medical Bill</h4>
+                        <p style="font-size: 0.8rem; color: var(--text-secondary);">Supports PDF, JPG, PNG (Max 10MB)
+                        </p>
+                    </div>
+
+                    <div id="ai-loader">
+                        <div class="loader-spinner"></div>
+                        <h4 id="loader-text">Analyzing Medical Bill...</h4>
+                        <p style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 0.5rem;">AI performing
+                            OCR & Fraud Matching</p>
+                    </div>
+                </div>
+
+                <!-- Analytics Charts -->
+                <div class="charts-grid">
+                    <div class="chart-container">
+                        <h4 style="font-size: 0.8rem; margin-bottom: 1rem;">Fraud Risk Distribution</h4>
+                        <canvas id="riskChart"></canvas>
+                    </div>
+                    <div class="chart-container">
+                        <h4 style="font-size: 0.8rem; margin-bottom: 1rem;">Hospital Trust Network</h4>
+                        <canvas id="hospitalChart"></canvas>
+                    </div>
+                </div>
+
+                <!-- Fraud Table -->
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title">Live Fraud Risk Queue</div>
+                        <input type="text" placeholder="Search Claim ID or Patient..."
+                            style="padding: 0.4rem 1rem; border-radius: 99px; border: 1px solid var(--border); font-size: 0.8rem; width: 250px;">
+                    </div>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Claim ID</th>
+                                <th>Patient</th>
+                                <th>Hospital</th>
+                                <th>Treatment</th>
+                                <th>Amount</th>
+                                <th>Risk Score</th>
+                                <th>Status</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td class="claim-id">CLM-9921</td>
+                                <td>A. Kapoor</td>
+                                <td>City General</td>
+                                <td>Cardiology</td>
+                                <td>₹42,000</td>
+                                <td><span class="risk-score risk-high">92%</span></td>
+                                <td><span style="color: var(--danger); font-weight: 700;">Critical</span></td>
+                                <td><button class="btn-ivestigate"
+                                        onclick="investigate('CLM-9921', 'A. Kapoor', 42000, 'Cardiology')">Investigate</button>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td class="claim-id">CLM-8832</td>
+                                <td>S. Verma</td>
+                                <td>Metro Care</td>
+                                <td>Oncology</td>
+                                <td>₹1,25,000</td>
+                                <td><span class="risk-score risk-med">64%</span></td>
+                                <td><span style="color: var(--warning); font-weight: 700;">Review</span></td>
+                                <td><button class="btn-ivestigate"
+                                        onclick="investigate('CLM-8832', 'S. Verma', 125000, 'Oncology')">Investigate</button>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td class="claim-id">CLM-7704</td>
+                                <td>R. Jha</td>
+                                <td>LifeLine Ltd.</td>
+                                <td>Pediatrics</td>
+                                <td>₹12,400</td>
+                                <td><span class="risk-score risk-low">14%</span></td>
+                                <td><span style="color: var(--success); font-weight: 700;">Safe</span></td>
+                                <td><button class="btn-ivestigate"
+                                        onclick="investigate('CLM-7704', 'R. Jha', 12400, 'Pediatrics')">Investigate</button>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Investigation Panel -->
+    <div class="panel-overlay" id="overlay" onclick="closePanel()"></div>
+    <div class="slide-panel" id="panel">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+            <h2 id="panel-title">Investigate Claim</h2>
+            <button onclick="closePanel()"
+                style="background: none; border: none; font-size: 1.5rem; cursor: pointer;">&times;</button>
+        </div>
+
+        <div id="panel-content">
+            <!-- Dynamic Content -->
+            <div
+                style="background: #f0fdf4; border: 1px solid #bbfcbd; padding: 1rem; border-radius: 10px; margin-bottom: 1.5rem;">
+                <h4 style="color: var(--success); margin-bottom: 0.5rem;">AI Claim Confidence</h4>
+                <div class="trust-meter">
+                    <div class="trust-fill" id="trust-fill" style="width: 85%;"></div>
+                </div>
+                <p id="confidence-text" style="font-size: 0.75rem; color: var(--text-secondary);">Matches 94% of
+                    historical valid claims from this provider.</p>
+            </div>
+
+            <h4 style="margin-bottom: 1rem;">Extracted Facts</h4>
+            <div id="ai-facts" style="font-size: 0.85rem; color: var(--text-secondary); line-height: 1.6;">
+                <!-- Facts injected here -->
+            </div>
+
+            <div style="margin-top: 2rem; display: flex; gap: 0.5rem;">
+                <button onclick="closePanel()"
+                    style="flex: 1; background: #059669; color: #fff; border: none; padding: 0.8rem; border-radius: 8px; font-weight: 700; cursor: pointer;">Approve</button>
+                <button onclick="closePanel()"
+                    style="flex: 1; background: #ef4444; color: #fff; border: none; padding: 0.8rem; border-radius: 8px; font-weight: 700; cursor: pointer;">Reject</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Init Charts
+        const riskCtx = document.getElementById('riskChart').getContext('2d');
+        new Chart(riskCtx, {
+            type: 'doughnut',
+            data: {
+                labels: ['High Risk', 'Moderate', 'Safe'],
+                datasets: [{
+                    data: [12, 19, 69],
+                    backgroundColor: ['#ef4444', '#eab308', '#059669'],
+                    borderWidth: 0
+                }]
+            },
+            options: { cutout: '70%', plugins: { legend: { position: 'bottom' } } }
+        });
+
+        const hospitalCtx = document.getElementById('hospitalChart').getContext('2d');
+        new Chart(hospitalCtx, {
+            type: 'bar',
+            data: {
+                labels: ['City Gen', 'Metro Care', 'LifeLine', 'Apex'],
+                datasets: [{
+                    label: 'Trust Score',
+                    data: [45, 78, 92, 61],
+                    backgroundColor: '#059669',
+                    borderRadius: 6
+                }]
+            },
+            options: { scales: { y: { beginAtZero: true, max: 100 } } }
+        });
+
+        async function simulateUpload() {
+            const loader = document.getElementById('ai-loader');
+            const zone = document.querySelector('.upload-zone');
+            zone.style.display = 'none';
+            loader.style.display = 'block';
+
+            const steps = ["Reading Medical Codes...", "Verifying Policy Limits...", "Checking Regional Pricing...", "Calculating Fraud Score..."];
+            for (let step of steps) {
+                document.getElementById('loader-text').textContent = step;
+                await new Promise(r => setTimeout(r, 800));
+            }
+
+            // Real simulated API call to our backend
+            try {
+                const response = await fetch('/api/claims/analyze', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        patient_name: "Simulated Patient",
+                        claim_amount: 15400,
+                        treatment_category: "Emergency Surgery"
+                    })
+                });
+                const data = await response.json();
+                investigate('CLM-MOCK', 'Simulated Patient', 15400, 'Emergency Surgery', data);
+            } catch (e) {
+                alert("Backend API not reachable. Check if Flask is running.");
+            }
+
+            loader.style.display = 'none';
+            zone.style.display = 'block';
+        }
+
+        function investigate(id, patient, amount, treatment, aiData = null) {
+            document.getElementById('panel').classList.add('open');
+            document.getElementById('overlay').classList.add('open');
+            document.getElementById('panel-title').textContent = "Investigate: " + id;
+
+            const factsDiv = document.getElementById('ai-facts');
+            if (aiData) {
+                document.getElementById('trust-fill').style.width = aiData.fraud_score + '%';
+                document.getElementById('confidence-text').textContent = "AI Analysis Confidence based on 100+ feature checks.";
+
+                factsDiv.innerHTML = `
+                    <p><strong>Patient:</strong> ${patient}</p>
+                    <p><strong>Treatment:</strong> ${treatment}</p>
+                    <p><strong>Amount:</strong> ₹${amount.toLocaleString()}</p>
+                    <hr style="margin: 1rem 0; opacity: 0.1;">
+                    <p style="color: #000; font-weight: 700; margin-bottom: 0.5rem;">AI Findings:</p>
+                    <ul style="padding-left: 1rem;">
+                        ${aiData.anomaly_flags.map(f => `<li style="color: #ef4444">${f}</li>`).join('')}
+                    </ul>
+                    <p style="margin-top: 1rem;"><strong>Summary:</strong> ${aiData.ai_summary}</p>
+                `;
+            } else {
+                // Static dummy data for pre-filled rows
+                factsDiv.innerHTML = `<p>Loading high-risk audit records for ${patient}...</p>`;
+                setTimeout(() => {
+                    factsDiv.innerHTML = `
+                        <p><strong>Detected Anomalies:</strong></p>
+                        <p style="color: #ef4444">- Patient age (24) mismatch with treatment code (Geriatric Care)</p>
+                        <p style="color: #ef4444">- Hospital billed 4x market average for this procedure</p>
+                        <p style="color: #ef4444">- Duplicate procedure code listed in 24-hour window</p>
+                    `;
+                    document.getElementById('trust-fill').style.width = (id === 'CLM-9921' ? '92%' : '45%');
+                }, 500);
+            }
+        }
+
+        function closePanel() {
+            document.getElementById('panel').classList.remove('open');
+            document.getElementById('overlay').classList.remove('open');
+        }
+    </script>
+</body>
+
+</html>
