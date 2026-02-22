@@ -930,7 +930,8 @@
                         </div>
 
                         <!-- Claim 3: Green -->
-                        <div class="claim-card" onclick="selectClaim(this)">
+                        <div class="claim-card" data-claim-id="77098000-0000-0000-0000-000000000000"
+                            onclick="selectClaim(this)">
                             <div class="claim-dot dot-green"></div>
                             <div class="claim-meta">
                                 <span class="claim-id">CLM-77098</span>
@@ -1083,7 +1084,10 @@
         function selectClaim(el) {
             document.querySelectorAll('.claim-card').forEach(c => c.classList.remove('selected'));
             el.classList.add('selected');
-            selectedClaimId = el.getAttribute('data-claim-id');
+            const claimFromCard = el.getAttribute('data-claim-id');
+            if (claimFromCard) {
+                selectedClaimId = claimFromCard;
+            }
             console.log("Selected Claim:", selectedClaimId);
 
             // Update panel title
@@ -1209,6 +1213,11 @@
 
         async function handleFileUpload(file) {
             if (!file) return;
+
+            if (!selectedClaimId) {
+                showToast("Select a claim before uploading a medical record.");
+                return;
+            }
 
             // Validate file extension
             const allowed = ['pdf', 'png', 'jpg', 'jpeg'];

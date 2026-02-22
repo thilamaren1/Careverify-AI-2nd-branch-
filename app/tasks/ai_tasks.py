@@ -228,8 +228,44 @@ def process_document_ocr(self, document_id: str, claim_id: str, storage_path: st
             if claim and claim["status"] == "submitted":
                 logger.info(f"[OCR] All documents OCR'd for claim {claim_id}. AI analysis will proceed.")
 
+        revalidate_claim_after_upload.apply_async(
+            args=[claim_id, document_id],
+            countdown=1,
+            task_id=f"reval-{claim_id}-{document_id}",
+        )
+
     except Exception as exc:
         logger.error(f"[OCR] Error processing document {document_id}: {exc}", exc_info=True)
+        raise self.retry(exc=exc)
+
+
+@celery_app.task(
+    bind=True,
+    name="app.tasks.ai_tasks.revalidate_claim_after_upload",
+    max_retries=2,
+    default_retry_delay=20,
+    queue="ai_processing",
+)
+def revalidate_claim_after_upload(self, claim_id: str, document_id: str):
+    """
+    Event-driven revalidation task:
+    OCR completion -> extraction -> compliance/risk recompute.
+    """
+    logger.info(f"[RevalidationTask] Triggered for claim {claim_id}, document {document_id}")
+    try:
+        from app.services.revalidation_service import get_revalidation_service
+
+        service = get_revalidation_service()
+        result = service.revalidate_claim(claim_id=claim_id, document_id=document_id)
+        logger.info(
+            f"[RevalidationTask] Completed for claim {claim_id}: "
+            f"status={result.get('status')} recommendation={result.get('recommendation')}"
+        )
+    except Exception as exc:
+        logger.error(
+            f"[RevalidationTask] Failed for claim {claim_id}, document {document_id}: {exc}",
+            exc_info=True,
+        )
         raise self.retry(exc=exc)
 
 

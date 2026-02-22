@@ -121,7 +121,7 @@ def upload_claim_document(claim_id: str):
 
     return jsonify({
         "document": result.data[0],
-        "message": "Document uploaded. OCR processing queued.",
+        "message": "Document uploaded. OCR and AI revalidation processing queued.",
     }), 201
 
 

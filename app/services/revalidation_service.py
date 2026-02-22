@@ -4,7 +4,6 @@ Coordinates the end-to-end re-scoring pipeline after document arrival.
 """
 
 import logging
-from dataclasses import asdict
 from datetime import datetime
 from typing import Any, Dict, List
 
@@ -108,6 +107,9 @@ class RevalidationService:
         )
         reviewer_suggestion = _build_reviewer_suggestion(ensemble_result.recommendation, facts.detected_risks)
         next_status = _map_recommendation_to_status(ensemble_result.recommendation)
+        if claim.get("status") == "draft":
+            next_status = "draft"
+            workflow_stage = "pre_submission_revalidation"
 
         ai_explanation = claim.get("ai_explanation") or {}
         ai_explanation.update(
@@ -146,7 +148,26 @@ class RevalidationService:
             "workflow_stage": workflow_stage,
             "auto_approval_eligible": auto_approval_eligible,
         }
-        supabase.table("claims").update(update_data).eq("id", claim_id).execute()
+        basic_update_data = {
+            "diagnosis_codes": update_data["diagnosis_codes"],
+            "procedure_codes": update_data["procedure_codes"],
+            "trust_score": update_data["trust_score"],
+            "fraud_probability": update_data["fraud_probability"],
+            "anomaly_score": update_data["anomaly_score"],
+            "approval_likelihood": update_data["approval_likelihood"],
+            "ai_recommendation": update_data["ai_recommendation"],
+            "ai_analyzed_at": update_data["ai_analyzed_at"],
+            "status": update_data["status"],
+            "ai_explanation": update_data["ai_explanation"],
+        }
+        try:
+            supabase.table("claims").update(update_data).eq("id", claim_id).execute()
+        except Exception as exc:
+            logger.warning(
+                f"[Revalidation] Extended claim intelligence fields unavailable; "
+                f"falling back to base fields for claim {claim_id}: {exc}"
+            )
+            supabase.table("claims").update(basic_update_data).eq("id", claim_id).execute()
 
         ai_record = {
             "claim_id": claim_id,
@@ -184,7 +205,12 @@ class RevalidationService:
         )
 
         try:
-            analyze_claim_async.apply_async(args=[claim_id], countdown=2, task_id=f"post-reval-{claim_id}")
+            unique_suffix = document_id or datetime.utcnow().strftime("%Y%m%d%H%M%S%f")
+            analyze_claim_async.apply_async(
+                args=[claim_id],
+                countdown=2,
+                task_id=f"post-reval-{claim_id}-{unique_suffix}",
+            )
         except Exception as exc:
             logger.warning(f"[Revalidation] Failed to queue async analysis for claim {claim_id}: {exc}")
 
