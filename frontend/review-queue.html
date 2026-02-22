@@ -1078,6 +1078,8 @@
     </div>
 
     <script>
+        const API_BASE_URL = 'http://127.0.0.1:5000';
+
         // STEP 1 — SELECT CLAIM
         let selectedClaimId = "99214000-0000-0000-0000-000000000000"; // Default
 
@@ -1242,8 +1244,8 @@
             }
 
             try {
-                // Using relative path for robustness across environments
-                const response = await fetch('/api/upload-medical-record', {
+                // Using absolute path to connect to backend on :5000
+                const response = await fetch(`${API_BASE_URL}/api/upload-medical-record`, {
                     method: 'POST',
                     body: formData
                 });

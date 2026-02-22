@@ -517,11 +517,12 @@
                 <!-- Claim Upload Mode -->
                 <div class="card" style="padding: 2rem;">
                     <h3 style="margin-bottom: 1.5rem; font-size: 1.1rem;">Submit New Claim for AI Risk Evaluation</h3>
-                    <div class="upload-zone" onclick="simulateUpload()">
-                        <div class="upload-icon">📤</div>
-                        <h4 style="margin-bottom: 0.5rem;">Drag & Drop Medical Bill</h4>
+                    <div class="upload-zone" onclick="document.getElementById('file-picker').click()">
+                        <div class="upload-icon">📁</div>
+                        <h4 style="margin-bottom: 0.5rem;">Click to Upload Medical Bill</h4>
                         <p style="font-size: 0.8rem; color: var(--text-secondary);">Supports PDF, JPG, PNG (Max 10MB)
                         </p>
+                        <input type="file" id="file-picker" style="display:none" onchange="simulateUpload(event)">
                     </div>
 
                     <div id="ai-loader">
@@ -644,6 +645,21 @@
     </div>
 
     <script>
+        const API_BASE_URL = 'http://127.0.0.1:5000';
+
+        // Check Backend Connection on Load
+        async function checkBackend() {
+            try {
+                const res = await fetch(`${API_BASE_URL}/health`);
+                const data = await res.json();
+                console.log("✅ Backend Connected:", data);
+            } catch (e) {
+                console.error("❌ Backend Connection Failed. Is Flask running on :5000?");
+                // Non-intrusive alert if someone tries to upload while disconnected
+            }
+        }
+        checkBackend();
+
         // Init Charts
         const riskCtx = document.getElementById('riskChart').getContext('2d');
         new Chart(riskCtx, {
@@ -674,7 +690,10 @@
             options: { scales: { y: { beginAtZero: true, max: 100 } } }
         });
 
-        async function simulateUpload() {
+        async function simulateUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
             const loader = document.getElementById('ai-loader');
             const zone = document.querySelector('.upload-zone');
             zone.style.display = 'none';
@@ -688,23 +707,25 @@
 
             // Real simulated API call to our backend
             try {
-                const response = await fetch('/api/claims/analyze', {
+                const response = await fetch(`${API_BASE_URL}/api/claims/analyze`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
-                        patient_name: "Simulated Patient",
+                        patient_name: file.name.split('.')[0] || "Simulated Patient",
                         claim_amount: 15400,
                         treatment_category: "Emergency Surgery"
                     })
                 });
                 const data = await response.json();
-                investigate('CLM-MOCK', 'Simulated Patient', 15400, 'Emergency Surgery', data);
+                investigate('CLM-MOCK', file.name.split('.')[0] || 'Simulated Patient', 15400, 'Emergency Surgery', data);
             } catch (e) {
-                alert("Backend API not reachable. Check if Flask is running.");
+                console.error("Fetch Error:", e);
+                alert(`Backend API not reachable at ${API_BASE_URL}. Check if Flask is running.`);
             }
 
             loader.style.display = 'none';
             zone.style.display = 'block';
+            event.target.value = ''; // Reset for next upload
         }
 
         function investigate(id, patient, amount, treatment, aiData = null) {
